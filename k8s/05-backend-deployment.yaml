@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: taskapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      initContainers:
+      - name: wait-for-mongo
+        image: busybox
+        command: ['sh', '-c', 'until nc -z mongo-service 27017; do echo waiting for mongo; sleep 2; done;']
+      containers:
+      - name: main-app
+        image: node:18
+        command: ["node", "server.js"]
+        workingDir: /app
+        volumeMounts:
+        - name: code
+          mountPath: /app
+        env:
+        - name: MONGO_USER
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: MONGO_USER
+        - name: MONGO_PASS
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: MONGO_PASS
+        - name: MONGO_HOST
+          value: mongo-service
+      - name: logger
+        image: busybox
+        command: ["sh", "-c", "tail -f /app/logs/app.log"]
+        volumeMounts:
+        - name: code
+          mountPath: /app
+      volumes:
+      - name: code
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: taskapp
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 3000
+    targetPort: 3000
+

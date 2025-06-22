@@ -1,0 +1,54 @@
+#apiVersion: v1
+#kind: ConfigMap
+#metadata:
+# name: app-config
+ # namespace: taskapp
+#data:
+#  API_BASE_URL: "http://backend-service.taskapp.svc.cluster.local:3000"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-html
+  namespace: taskapp
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head><title>Task Tracker</title></head>
+    <body>
+      <h1>Task Tracker App</h1>
+      <form id="taskForm">
+        <input type="text" id="title" placeholder="Enter Task Title" required />
+        <button type="submit">Add Task</button>
+      </form>
+      <ul id="taskList"></ul>
+
+      <script>
+        const api = "/api/tasks";
+        async function fetchTasks() {
+          const res = await fetch(api);
+          const tasks = await res.json();
+          const list = document.getElementById('taskList');
+          list.innerHTML = '';
+          tasks.forEach(task => {
+            const li = document.createElement('li');
+            li.textContent = task.title;
+            list.appendChild(li);
+          });
+        }
+        document.getElementById('taskForm').addEventListener('submit', async e => {
+          e.preventDefault();
+          const title = document.getElementById('title').value;
+          await fetch(api, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title })
+          });
+          fetchTasks();
+        });
+        fetchTasks();
+      </script>
+    </body>
+    </html>
+
